@@ -45,15 +45,52 @@ Type "help" for help.
 ```
 
 ```
-$ rails generate migration create_posts title:string body:text
+$ rails generate scaffold create_posts title:string body:text
       invoke  active_record
       create    db/migrate/20241204112954_create_posts.rb
+      create    app/models/post.rb
+      invoke  resource_route
+       route    resources :posts
+      invoke  scaffold_controller
+      create    app/controllers/posts_controller.rb
+      invoke    erb
+      create      app/views/posts
+      create      app/views/posts/index.html.erb
+      create      app/views/posts/edit.html.erb
+      create      app/views/posts/show.html.erb
+      create      app/views/posts/new.html.erb
+      create      app/views/posts/_form.html.erb
+      create      app/views/posts/_post.html.erb
+      invoke    resource_route
+      invoke    helper
+      create      app/helpers/posts_helper.rb
 
 $ rails db:migrate
 == 20241204112954 CreatePosts: migrating ======================================
 -- create_table(:posts)
    -> 0.3887s
 == 20241204112954 CreatePosts: migrated (0.3889s) =============================
+
+$ rails console
+Loading development environment (Rails 7.2.2)
+
+pry(main)> post = Post.create!(title: "Hello, world!")
+  TRANSACTION (218.9ms)  BEGIN
+  Post Create (530.9ms)  INSERT INTO "posts" ("title", "body", "created_at", "updated_at") VALUES ($1, $2, $3, $4) RETURNING "id"  [["title", "Hello, world!"], ["body", nil], ["created_at", "2024-12-04 11:37:41.238422"], ["updated_at", "2024-12-04 11:37:41.238422"]]
+  TRANSACTION (276.7ms)  COMMIT
+=> #<Post:0x00000001267f30d8 id: "5b642ccc-c5e1-4d7c-828b-70fc107bf6e9", title: "Hello, world!", body: nil, created_at: "2024-12-04 11:37:41.238422000 +0000", updated_at: "2024-12-04 11:37:41.238422000 +0000">
+
+pry(main)> post.update!(body: "Should probably write something...")
+  TRANSACTION (221.5ms)  BEGIN
+  Post Update (503.8ms)  UPDATE "posts" SET "body" = $1, "updated_at" = $2 WHERE "posts"."id" = $3  [["body", "Should probably write something..."], ["updated_at", "2024-12-04 11:37:54.659673"], ["id", "5b642ccc-c5e1-4d7c-828b-70fc107bf6e9"]]
+  TRANSACTION (258.7ms)  COMMIT
+=> true
+
+pry(main)> post.destroy!
+  TRANSACTION (217.6ms)  BEGIN
+  Post Destroy (439.5ms)  DELETE FROM "posts" WHERE "posts"."id" = $1  [["id", "5b642ccc-c5e1-4d7c-828b-70fc107bf6e9"]]
+  TRANSACTION (230.3ms)  COMMIT
+=> #<Post:0x00000001267f30d8 id: "5b642ccc-c5e1-4d7c-828b-70fc107bf6e9", title: "Hello, world!", body: "Should probably write something...", created_at: "2024-12-04 11:37:41.238422000 +0000", updated_at: "2024-12-04 11:37:54.659673000 +0000">
 ```
 
 ```ruby
