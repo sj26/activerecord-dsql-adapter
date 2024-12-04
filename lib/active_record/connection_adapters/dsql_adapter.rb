@@ -13,12 +13,24 @@ module ActiveRecord
       class << self
         def new_client(conn_params)
           conn_params[:sslmode] ||= "require"
-          conn_params[:user] ||= "admin"
           conn_params[:dbname] ||= "postgres"
-
+          conn_params[:user] ||= "admin"
           conn_params[:password] ||= generate_password(conn_params)
 
           super(conn_params)
+        end
+
+        def dbconsole(config, options = {})
+          config_hash = config.configuration_hash.dup
+
+          config_hash[:sslmode] ||= "require"
+          config_hash[:database] ||= "postgres"
+          config_hash[:username] ||= "admin"
+          config_hash[:password] ||= generate_password(config_hash)
+
+          config = ActiveRecord::DatabaseConfigurations::HashConfig.new(config.env_name, config.name, config_hash)
+
+          super(config, options)
         end
 
         private
