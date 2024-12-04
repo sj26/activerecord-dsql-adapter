@@ -35,11 +35,36 @@ module ActiveRecord
         end
       end
 
-      def configure_connection
-        # PostgreSQLAdapter sets a bunch of parameters here which DSQL doesn't support
+      # DSQL doesn't support serial or bigserial
+
+      def self.native_database_types # :nodoc:
+        @native_database_types ||= begin
+          types = NATIVE_DATABASE_TYPES.dup
+          types[:primary_key] = "bigint primary key"
+          types[:datetime] = types[datetime_type]
+          types
+        end
+      end
+
+      # DSQL doesn't support these parameters, but PostgreSQLAdapter always sets them in #configure_connection
+
+      def client_min_messages
+        nil
+      end
+
+      def client_min_messages=(value)
+        nil
+      end
+
+      def set_standard_conforming_strings
+        nil
       end
 
       # https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-postgresql-compatibility-unsupported-features.html
+
+      def supports_advisory_locks?
+        false
+      end
 
       def supports_views?
         false
@@ -49,11 +74,23 @@ module ActiveRecord
         false
       end
 
+      def supports_foreign_keys?
+        false
+      end
+
+      def supports_exclusion_constraints?
+        false
+      end
+
       def supports_extensions?
         false
       end
 
       def supports_index_sort_order?
+        false
+      end
+
+      def supports_json?
         false
       end
     end
