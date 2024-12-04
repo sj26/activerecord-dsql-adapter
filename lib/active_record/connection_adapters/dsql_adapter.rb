@@ -149,6 +149,12 @@ module ActiveRecord
            ORDER BY i.idx
         SQL
       end
+
+      def create_schema_dumper(options) # :nodoc:
+        DSQL::SchemaDumper.create(self, options)
+      end
+    end
+  end
 end
 
 ActiveSupport.run_load_hooks(:active_record_dsql_adapter, ActiveRecord::ConnectionAdapters::DSQLAdapter)

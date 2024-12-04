@@ -7,6 +7,16 @@ ActiveSupport.on_load(:active_record) do
 end
 
 module ActiveRecord
+  module ConnectionAdapters
+    module DSQL
+      extend ActiveSupport::Autoload
+
+      autoload :SchemaDumper
+    end
+  end
+end
+
+module ActiveRecord
   module Tasks
     extend ActiveSupport::Autoload
 
