@@ -7,6 +7,14 @@ require "active_record/connection_adapters/postgresql_adapter"
 
 module ActiveRecord
   module ConnectionAdapters
+    module DSQL
+      class Railtie < ::Rails::Railtie
+        rake_tasks do
+          ActiveRecord::DatabaseTasks.register_task("dsql", "ActiveRecord::Tasks::DSQLDatabaseTasks")
+        end
+      end
+    end
+
     class DSQLAdapter < PostgreSQLAdapter
       ADAPTER_NAME = "DSQL"
 
@@ -117,12 +125,6 @@ module ActiveRecord
       #
       def supports_ddl_transactions?
         false
-      end
-
-      class Railtie < ::Rails::Railtie
-        rake_tasks do
-          ActiveRecord::DatabaseTasks.register_task("dsql", "ActiveRecord::Tasks::DSQLDatabaseTasks")
-        end
       end
     end
   end
