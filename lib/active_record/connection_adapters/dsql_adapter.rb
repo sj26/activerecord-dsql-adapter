@@ -126,6 +126,29 @@ module ActiveRecord
       def supports_ddl_transactions?
         false
       end
+
+      # DSQL creates a primary key index which INCLUDES all columns in the
+      # table. We use indnkeyatts to only take notice of key (not INCLUDE-ed)
+      # columns for the primary key.
+      #
+      # https://www.postgresql.org/docs/current/catalog-pg-index.html
+      #
+      def primary_keys(table_name) # :nodoc:
+        query_values(<<~SQL, "SCHEMA")
+          SELECT a.attname
+            FROM (
+                   SELECT indrelid, indnkeyatts, indkey, generate_subscripts(indkey, 1) idx
+                     FROM pg_index
+                    WHERE indrelid = #{quote(quote_table_name(table_name))}::regclass
+                      AND indisprimary
+                 ) i
+            JOIN pg_attribute a
+              ON a.attrelid = i.indrelid
+             AND a.attnum = i.indkey[i.idx]
+           WHERE i.idx < i.indnkeyatts
+           ORDER BY i.idx
+        SQL
+      end
     end
   end
 
