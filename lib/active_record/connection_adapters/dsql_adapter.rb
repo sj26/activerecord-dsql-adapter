@@ -7,14 +7,6 @@ require "active_record/connection_adapters/postgresql_adapter"
 
 module ActiveRecord
   module ConnectionAdapters
-    module DSQL
-      class Railtie < ::Rails::Railtie
-        rake_tasks do
-          ActiveRecord::DatabaseTasks.register_task("dsql", "ActiveRecord::Tasks::DSQLDatabaseTasks")
-        end
-      end
-    end
-
     class DSQLAdapter < PostgreSQLAdapter
       ADAPTER_NAME = "DSQL"
 
@@ -157,13 +149,6 @@ module ActiveRecord
            ORDER BY i.idx
         SQL
       end
-    end
-  end
-
-  module Tasks
-    class DSQLDatabaseTasks < PostgreSQLDatabaseTasks
-    end
-  end
 end
 
 ActiveSupport.run_load_hooks(:active_record_dsql_adapter, ActiveRecord::ConnectionAdapters::DSQLAdapter)
