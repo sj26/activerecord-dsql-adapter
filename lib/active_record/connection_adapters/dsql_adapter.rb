@@ -115,6 +115,17 @@ module ActiveRecord
       def supports_ddl_transactions?
         false
       end
+
+      class Railtie < ::Rails::Railtie
+        rake_tasks do
+          ActiveRecord::DatabaseTasks.register_task("dsql", "ActiveRecord::Tasks::DSQLDatabaseTasks")
+        end
+      end
+    end
+  end
+
+  module Tasks
+    class DSQLDatabaseTasks < PostgreSQLDatabaseTasks
     end
   end
 end
