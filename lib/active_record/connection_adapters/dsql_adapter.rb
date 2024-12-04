@@ -93,6 +93,16 @@ module ActiveRecord
       def supports_json?
         false
       end
+
+      # DSQL *does* support DDL transactions, but does not support mixing DDL and
+      # DML, so inserting the migration version into the schema_migrations
+      # table fails unless we turn off the DDL transaction.
+      #
+      # PG::FeatureNotSupported: ERROR: ddl and dml are not supported in the same transaction
+      #
+      def supports_ddl_transactions?
+        false
+      end
     end
   end
 end
