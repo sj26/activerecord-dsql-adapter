@@ -127,6 +127,14 @@ module ActiveRecord
         false
       end
 
+      # Ignore DSQL sys schema.
+      #
+      # https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-systems-tables.html
+      #
+      def schema_names
+        super - ["sys"]
+      end
+
       # DSQL creates a primary key index which INCLUDES all columns in the
       # table. We use indnkeyatts to only take notice of key (not INCLUDE-ed)
       # columns for the primary key.
