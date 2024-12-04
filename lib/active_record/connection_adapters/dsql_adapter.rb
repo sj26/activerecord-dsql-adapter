@@ -47,12 +47,15 @@ module ActiveRecord
         end
       end
 
-      # DSQL doesn't support serial or bigserial
-
+      # DSQL doesn't support serial or bigserial, nor sequences, but seems to
+      # endorse using uuid with default random function uuids for primary keys
+      #
+      # https://docs.aws.amazon.com/aurora-dsql/latest/userguide/getting-started.html
+      #
       def self.native_database_types # :nodoc:
         @native_database_types ||= begin
           types = NATIVE_DATABASE_TYPES.dup
-          types[:primary_key] = "bigint primary key"
+          types[:primary_key] = "uuid primary key unique default gen_random_uuid()"
           types[:datetime] = types[datetime_type]
           types
         end
