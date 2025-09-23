@@ -10,6 +10,8 @@ module ActiveRecord
     class DSQLAdapter < PostgreSQLAdapter
       ADAPTER_NAME = "DSQL"
 
+      include ActiveRecord::ConnectionAdapters::DSQL::SchemaStatements
+
       class << self
         def new_client(conn_params)
           conn_params[:sslmode] ||= "require"
@@ -117,6 +119,10 @@ module ActiveRecord
       #
       def supports_ddl_transactions?
         false
+      end
+
+      def index_algorithms
+        { async: "ASYNC" }
       end
 
       # Ignore DSQL sys schema.

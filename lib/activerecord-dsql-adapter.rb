@@ -12,6 +12,7 @@ module ActiveRecord
       extend ActiveSupport::Autoload
 
       autoload :SchemaDumper
+      autoload :SchemaStatements
     end
   end
 end
