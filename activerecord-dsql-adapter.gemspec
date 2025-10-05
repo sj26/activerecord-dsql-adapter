@@ -18,7 +18,7 @@ Gem::Specification.new do |spec|
 
   spec.files = Dir["README.md", "lib/**/*"]
 
-  spec.add_dependency "activerecord", ">= 7.2.0"
+  spec.add_dependency "activerecord", ">= 7.2.0", "< 9"
   spec.add_dependency "pg", "~> 1.1"
   spec.add_dependency "aws-sdk-dsql"
 end
