@@ -11,12 +11,17 @@ bundle add activerecord-dsql-adapter
 ```
 
 ## Usage
-
+Below is a suggested database configuration. 
+Optimistic Concurrency Conflicts can be automatically retried.
+Generated tokens for DSQL expire after 1 hour so any connections should be invalidated before then.
 ```
 # config/database.yml
 development:
   adapter: dsql
   host: abc123.dsql.us-east-1.on.aws
+  occ_max_retries: 3
+  max_lifetime_minutes: 45
+  sslmode: require
 ```
 
 Credentials available in ENV or inside your `~/.aws/config` file will be used to generate an appropriate AWS signature as a password:
