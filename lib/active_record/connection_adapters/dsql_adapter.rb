@@ -27,7 +27,7 @@ module ActiveRecord
       end
 
       def active?
-        return false if token_expired?
+        return false if token_expired? && !in_transaction?
         super
       end
 
@@ -49,15 +49,19 @@ module ActiveRecord
 
       public
 
-      def with_raw_connection(allow_retry: false, materialize_transactions: true)
+      # we cannot reconnect if in the middle of a transaction
+      # as a safety, put padding in max_lifetime_minutes
+      def transaction(requires_new: nil, isolation: nil, joinable: true, &block)
         AuroraDsql::Pg::OCCRetry.retry_on_occ(occ_retry_config, logger: ActiveRecord::Base.logger) do
-          if token_expired?
-            @verified = false
-            @last_activity = nil
-          end
-          super(allow_retry:, materialize_transactions:) do |conn|
-            yield conn
-          end
+          reconnect! if token_expired?
+          super(requires_new:, isolation:, joinable:, &block)
+        end
+      end
+
+      def with_raw_connection(allow_retry: false, materialize_transactions: true)
+        reconnect! if token_expired? && !in_transaction?
+        super(allow_retry:, materialize_transactions:) do |conn|
+          yield conn
         end
       end
 
