@@ -14,6 +14,23 @@ module ActiveRecord
 
       include ActiveRecord::ConnectionAdapters::DSQL::SchemaStatements
 
+      def max_lifetime_seconds
+        if @config[:max_lifetime_minutes]
+          @config[:max_lifetime_minutes].to_f * 60
+        else
+          AuroraDsql::Pg::CONFIG[:max_lifetime].to_i
+        end
+      end
+
+      def token_expired?
+        !@token_refreshed_at || Time.now.utc - @token_refreshed_at >= max_lifetime_seconds
+      end
+
+      def active?
+        return false if token_expired?
+        super
+      end
+
       def occ_max_retries
         @config[:occ_max_retries].to_i
       end
@@ -22,8 +39,22 @@ module ActiveRecord
         AuroraDsql::Pg::OCCRetry::DEFAULT_CONFIG.merge(max_retries: occ_max_retries)
       end
 
+      private
+
+      def reconnect
+        @raw_connection = nil
+        connect
+        @token_refreshed_at = Time.now.utc
+      end
+
+      public
+
       def with_raw_connection(allow_retry: false, materialize_transactions: true)
         AuroraDsql::Pg::OCCRetry.retry_on_occ(occ_retry_config, logger: ActiveRecord::Base.logger) do
+          if token_expired?
+            @verified = false
+            @last_activity = nil
+          end
           super(allow_retry:, materialize_transactions:) do |conn|
             yield conn
           end
