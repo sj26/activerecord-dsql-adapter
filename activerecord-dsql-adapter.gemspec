@@ -20,5 +20,6 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency "activerecord", ">= 7.2.0", "< 9"
   spec.add_dependency "pg", "~> 1.1"
+  spec.add_dependency "aurora-dsql-ruby-pg", "~> 1.1"
   spec.add_dependency "aws-sdk-dsql"
 end

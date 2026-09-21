@@ -5,6 +5,8 @@ require "aws-sdk-dsql"
 require "active_record"
 require "active_record/connection_adapters/postgresql_adapter"
 
+require "aurora_dsql_pg"
+
 module ActiveRecord
   module ConnectionAdapters
     class DSQLAdapter < PostgreSQLAdapter
@@ -12,14 +14,87 @@ module ActiveRecord
 
       include ActiveRecord::ConnectionAdapters::DSQL::SchemaStatements
 
+      def max_lifetime_seconds
+        if @config[:max_lifetime_minutes]
+          @config[:max_lifetime_minutes].to_f * 60
+        else
+          AuroraDsql::Pg::CONFIG[:max_lifetime].to_i
+        end
+      end
+
+      def token_expired?
+        !@token_refreshed_at || Time.now.utc - @token_refreshed_at >= max_lifetime_seconds
+      end
+
+      def active?
+        return false if token_expired? && !in_transaction?
+        super
+      end
+
+      def occ_max_retries
+        @config[:occ_max_retries].to_i
+      end
+
+      def occ_retry_config
+        AuroraDsql::Pg::OCCRetry::DEFAULT_CONFIG.merge(max_retries: occ_max_retries)
+      end
+
+      private
+
+      def reconnect
+        @raw_connection = nil
+        connect
+        @token_refreshed_at = Time.now.utc
+      end
+
+      public
+
+      # we cannot reconnect if in the middle of a transaction
+      # as a safety, put padding in max_lifetime_minutes
+      def transaction(requires_new: nil, isolation: nil, joinable: true, &block)
+        AuroraDsql::Pg::OCCRetry.retry_on_occ(occ_retry_config, logger: ActiveRecord::Base.logger) do
+          reconnect! if token_expired?
+          super(requires_new:, isolation:, joinable:, &block)
+        end
+      end
+
+      def with_raw_connection(allow_retry: false, materialize_transactions: true)
+        reconnect! if token_expired? && !in_transaction?
+        super(allow_retry:, materialize_transactions:) do |conn|
+          yield conn
+        end
+      end
+
       class << self
         def new_client(conn_params)
-          conn_params[:sslmode] ||= "require"
-          conn_params[:dbname] ||= "postgres"
-          conn_params[:user] ||= "admin"
-          conn_params[:password] ||= generate_password(conn_params)
+          # AuroraDsql::Pg.connect forces sslmode: verify-full!
+          # Instead of using that we re-write it here with an optional sslmode override.
+          # In development mode using sslmode: require is easier to set up than verify-full.
+          # AuroraDsql::Pg.connect(**conn_params)
 
-          super(conn_params)
+          config = conn_params
+          options = {}
+          resolved = AuroraDsql::Pg::Config.from(config, **options).resolve
+          token = AuroraDsql::Pg::Token.generate(
+            host: resolved.host, region: resolved.region,
+            user: resolved.user, credentials: resolved.credentials_provider,
+            profile: resolved.profile, expires_in: resolved.token_duration
+          )
+          pg_params = resolved.to_pg_params(password: token)
+          pg_params[:sslmode] = conn_params[:sslmode] if conn_params[:sslmode]
+          ::PG.connect(pg_params)
+        rescue ::PG::Error => error
+          if conn_params && conn_params[:dbname] == "postgres"
+            raise ActiveRecord::ConnectionNotEstablished, error.message
+          elsif conn_params && conn_params[:dbname] && error.message.include?(conn_params[:dbname])
+            raise ActiveRecord::NoDatabaseError.db_error(conn_params[:dbname])
+          elsif conn_params && conn_params[:user] && error.message.include?(conn_params[:user])
+            raise ActiveRecord::DatabaseConnectionError.username_error(conn_params[:user])
+          elsif conn_params && conn_params[:host] && error.message.include?(conn_params[:host])
+            raise ActiveRecord::DatabaseConnectionError.hostname_error(conn_params[:host])
+          else
+            raise ActiveRecord::ConnectionNotEstablished, error.message
+          end
         end
 
         def dbconsole(config, options = {})
